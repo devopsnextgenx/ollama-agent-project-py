@@ -1,0 +1,65 @@
+# Python bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Distribution/packaging
+dist/
+build/
+*.egg-info/
+
+# Virtual environments
+venv/
+env/
+.env/
+.venv/
+
+# IDE settings
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Unit test / coverage
+.coverage
+htmlcov/
+.tox/
+.pytest_cache/
+.mypy_cache/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# Local development settings
+.env
+.env.local
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Documentation
+docs/_build/
+site/
+
+# Database
+*.db
+*.sqlite3
+
+# Logs
+*.log
+logs/
+
+# Local development
+local_settings.py
+db.sqlite3
+
+
+# Contents
+contents/
+.novel-spec.yml
