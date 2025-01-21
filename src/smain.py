@@ -10,26 +10,32 @@ llmConfig = LLMProvider.create_llm_config(base_url="http://localhost:11434", mod
 
 systemAgent = SystemAgent(llmConfig)
 
+EXIT_COMMANDS = ["exit", "bye", "quit"]
+
+def processPrompt(prompt):
+        start_time = time.time()
+        print(datetime.datetime.now())
+        response: AgentResponse = systemAgent.queryLLM(prompt)
+        actionResponse = process_command(response.content)
+        print(actionResponse)
+        end_time = time.time()
+        duration = end_time - start_time
+        hours = int(duration // 3600)
+        minutes = int((duration % 3600) // 60)
+        seconds = int(duration % 60)
+        print(f"System command completed in {duration:.2f} seconds.")
+        print(f"Duration: {hours:02d}:{minutes:02d}:{seconds:02d}")
+
 async def main():
-    start_time = time.time()
-    print(datetime.datetime.now())
-    print("Starting novel generation...")
-    
-    response: AgentResponse = systemAgent.queryLLM("How to check current user name")
-    actionResponse = process_command(response.content)
-    print(actionResponse)
+    exit_flag = False
+    while not exit_flag:
+        user_input = input("Enter your command (or 'exit','bye','quit' to quit): ")
+        if EXIT_COMMANDS.__contains__(user_input):
+            exit_flag = True
+            continue
+        
+        processPrompt(user_input)
 
-    response: AgentResponse = systemAgent.queryLLM("How to get current directory name")
-    actionResponse = process_command(response.content)
-    print(actionResponse)
-
-    end_time = time.time()
-    duration = end_time - start_time
-    hours = int(duration // 3600)
-    minutes = int((duration % 3600) // 60)
-    seconds = int(duration % 60)
-    print(f"System command completed in {duration:.2f} seconds.")
-    print(f"Duration: {hours:02d}:{minutes:02d}:{seconds:02d}")
 
 if __name__ == "__main__":
     import asyncio

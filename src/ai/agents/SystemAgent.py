@@ -33,7 +33,9 @@ class SystemAgent:
                 "command": {
                     "type": "string",
                     "enum": ["ls", "du", "df", "whoami", "pwd"]
-
+                },
+                "command_args": {
+                    "type": "string"
                 }
             },
             "required": ["action", "command"]

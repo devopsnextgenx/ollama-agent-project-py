@@ -1,0 +1,23 @@
+characters:
+- age: 39
+  background: Player
+  motivation: Win at all cost
+  name: Amit
+  physicalDescription: slim and atheletic
+  role: Hero
+- age: 39
+  background: Wife
+  motivation: Make Amit Happy
+  name: Poonam
+  physicalDescription: Beautyful
+  role: Heroin
+description: Hero Heroin
+genre: Romatic
+keyEvents:
+- Meet and have a date
+mainCharacterName: Amit
+pagesPerChapter: 4
+targetAudience: Adult
+title: Winner
+totalChapters: 5
+wordsPerPage: 900
