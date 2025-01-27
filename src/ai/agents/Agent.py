@@ -28,7 +28,7 @@ class Agent:
         
         response: AgentResponse = self.generate_structured(prompt, responseSchema) if responseSchema is not None else self.generate(prompt)
         
-        with open(f"contents/{file_name}-{self.name}.md", 'w') as f:
+        with open(f"{self.llmConfig.modelStore}/{file_name}-{self.name}.md", 'w') as f:
             f.write(response.content if responseSchema is None else json.dumps(response.content, indent=4))
             
         logger.info(f"{self.name} agent generated content.")
@@ -45,7 +45,8 @@ class Agent:
             self.llm = OllamaLLM(
                 model=self.llmConfig.model,
                 base_url=self.llmConfig.base_url,
-                temperature=self.llmConfig.openAIConfig.temperature
+                temperature=self.llmConfig.openAIConfig.temperature,
+                max_tokens=8000
             )
 
             content = self.llm.invoke(full_prompt)
@@ -66,7 +67,11 @@ class Agent:
                         model=self.llmConfig.model,
                         prompt=full_prompt,
                         format=responseSchema,
-                        stream=False
+                        stream=False,
+                        options={
+                            "max_tokens": 8000,  # Set the max tokens
+                            "temperature": self.llmConfig.openAIConfig.temperature,  # Optional: creativity level
+                        }
                     )
 
         self.memory.append(response.response)

@@ -7,9 +7,9 @@ characters:
   role: Hero
 - age: 39
   background: Wife
-  motivation: Make Amit Happy
+  motivation: Win at all cost
   name: Poonam
-  physicalDescription: Beautyful
+  physicalDescription: Beautiful
   role: Heroin
 description: Hero Heroin
 genre: Romatic
@@ -18,6 +18,6 @@ keyEvents:
 mainCharacterName: Amit
 pagesPerChapter: 4
 targetAudience: Adult
-title: Winner
+title: Couple
 totalChapters: 5
 wordsPerPage: 900

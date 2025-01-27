@@ -3,6 +3,7 @@ from ai.agents.Agent import Agent
 from ai.models.novel.Schema import NovelSpec, ChapterSpec, AgentResponse, Character
 from ai.models.LLMConfig import LLMConfig
 from typing import List
+import numpy as np
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -13,25 +14,25 @@ class NovelWriter:
         self.agents = {
             "plotter": Agent(
                 name="Plotter",
-                role="plot_development",
-                base_prompt="You are a creative plot developer. Create engaging and coherent plot points.",
+                role="plot_planner",
+                base_prompt="You are a creative plot developer in dialogue-driven storytelling. Create engaging and coherent plot points.",
                 llmConfig=llmConfig
             ),
             "character_developer": Agent(
                 name="Character Developer",
-                role="character_development",
+                role="character_developer",
                 base_prompt="You are a character developer. Create deep, complex characters with clear motivations.",
                 llmConfig=llmConfig
             ),
             "writer": Agent(
                 name="Writer",
-                role="content_writing",
-                base_prompt="You are a creative writer. Transform plot points and character details into engaging prose.",
+                role="chapter_writer",
+                base_prompt="You are a creative writer with dialogue-driven storytelling.",
                 llmConfig=llmConfig
             ),
             "editor": Agent(
                 name="Editor",
-                role="editing",
+                role="editor",
                 base_prompt="You are an editor. Review and improve the content while maintaining consistency.",
                 llmConfig=llmConfig
             )
@@ -41,8 +42,10 @@ class NovelWriter:
             """Format character details into a structured string"""
             formatted_characters = []
             for char in characters:
-                details = [f"Character: {char.name}", f"Role: {char.role}"]
+                details = [f"\nCharacter: {char.name}", f"Role: {char.role}"]
                 
+                if hasattr(char, 'gender'):
+                    details.append(f"Gender: {char.gender}")
                 if hasattr(char, 'age'):
                     details.append(f"Age: {char.age}")
                 if hasattr(char, 'physicalDescription'):
@@ -59,7 +62,13 @@ class NovelWriter:
                 
                 # Traits
                 traits = getattr(char, 'traits', None)
-                traits_str = "\nTraits:\n" + "\n".join(f"- {trait['trait']}: {trait['description']}" for trait in traits) if traits else "- None specified"
+                if traits:
+                    traits_str = "\nTraits:\n" + "\n".join(
+                        f"- {trait['trait']}: {trait['description']}" 
+                        for trait in traits
+                    )
+                else:
+                    traits_str = "\nTraits:\n- None specified"
                 details.append(traits_str)
                 
                 # Character Arc
@@ -74,7 +83,7 @@ class NovelWriter:
                 relationships = getattr(char, 'relationships', None)
                 if relationships:
                     rel_str = "\nRelationships:\n" + "\n".join(
-                        f"- With {rel['withCharacter']}: {rel['relationshipType']}\n  Dynamics: {rel['dynamics']}\n  {f'Arc: {rel['arc']}' if hasattr(rel, 'arc') else ''}"
+                        f"- With {rel['withCharacter']}: {rel['relationshipType']}{f'\n  Dynamics: {rel['dynamics']}' if hasattr(rel, 'dynamics') else ''}\n  {f'Arc: {rel['arc']}' if hasattr(rel, 'arc') else ''}"
                         for rel in relationships
                     )
                 else:
@@ -92,16 +101,22 @@ class NovelWriter:
         if spec.keyEvents is not None:
             keyEvents = '\n               - '.join(spec.keyEvents)
         prompt = f"""
-            Create a detailed plot outline for a {spec.totalChapters}-chapter novel titled "{spec.title}".
+            Create a detailed plot outline for an erotic romantic novel for mature audiences (18+). 
+
+            Novel Specs:
             Genre: {spec.genre or 'General Fiction'}
             Target Audience: {spec.targetAudience or 'General Adult'}
             Description: {spec.description or 'A compelling story'}
             Characters: {await self.format_character_details(spec.characters)}
-            key events: \n               - {keyEvents}
+            \n\n
+            Key Events: \n               - {keyEvents}
             
             Requirements:
-            - Create {spec.totalChapters} chapters
+            - Create {spec.totalChapters} chapters exactly.
+            - The story should involve steamy and explicit romantic encounters, alongside emotional growth and vulnerability. 
+            - Include key events, character arcs, and moments of both emotional and physical intimacy that are explicit but tastefully written, immersing the reader in a seductive and heartfelt journey.
             - Create major plot points for each chapter using key events
+            - Use each key event to develop 2-4 chapters and organically weave them into the narrative.
             - Ensure narrative arc across all {spec.totalChapters} chapters
             - Create 3 key events or turning points
             - Consider pacing and tension
@@ -115,13 +130,14 @@ class NovelWriter:
                     "items": {
                         "type": "object",
                         "properties": {
+                            "Chapter#": {"type": "integer"},
                             "title": {"type": "string"},
                             "plot": {"type": "string"},
                             "keyEvents": {
-                                "type": "array", "items": {"type": "string"}, "maxItems": 3
+                                "type": "array", "items": {"type": "string"}, "maxItems": 4, "minItems": 2
                             }
                         },
-                        "required": ["title", "plot", "keyEvents"]
+                        "required": ["Chapter#","title", "plot", "keyEvents"]
                     }
                 }
             },
@@ -155,12 +171,14 @@ class NovelWriter:
 
             context = {
                 "description": novelSpec.description,
+                "keyEvents": novelSpec.keyEvents,
                 "plot": novelSpec.keyEvents,
                 "chapters": plotOutline.content['chapters'],
                 "characters": characterProfiles.content
             }
             chapterCount = 0
-            while chapterCount < novelSpec.totalChapters:
+            print (f"Generating {len(context['chapters'])} chapters...")
+            while chapterCount < novelSpec.totalChapters and chapterCount < len(context['chapters']):
                 chapterSpec = ChapterSpec(
                     chapterNumber=chapterCount + 1,
                     pagesPerChapter=novelSpec.pagesPerChapter,
@@ -180,7 +198,7 @@ class NovelWriter:
     def generateChapter(self, chapterSpec: ChapterSpec, novelSpec: NovelSpec, context) -> AgentResponse:
         """Generate a chapter using all agents in sequence"""
         logger.debug(f"=====================================================================")
-        logger.debug(f"Generating chapter {chapterSpec.chapterNumber}...")
+        logger.info(f"Generating chapter {chapterSpec.chapterNumber}...")
         try:
             # Generate plot points
             chapterPlot: AgentResponse = self.agents["plotter"].timed_generate(
@@ -188,14 +206,14 @@ class NovelWriter:
                 f"chapter_plot_{chapterSpec.chapterNumber}",
             )
 
-            chatperContext = { "plot": chapterPlot.content, "characters": context["characters"] }
+            chatperContext = { "plot": chapterPlot.content, "characters": context["characters"], "description": context["description"], "keyEvents": context["keyEvents"] }
 
-            # Develop characters
-            chapterCharacters: AgentResponse = self.agents["character_developer"].timed_generate(
-                self.create_chapter_character_prompt(chapterSpec=chapterSpec, chapterPlot=chapterPlot, novelSpec=novelSpec, context=context),
-                f"chapter_char_{chapterSpec.chapterNumber}"
-            )
-            chatperContext["characters"] = chapterCharacters.content
+            # # Develop characters
+            # chapterCharacters: AgentResponse = self.agents["character_developer"].timed_generate(
+            #     self.create_chapter_character_prompt(chapterSpec=chapterSpec, chapterPlot=chapterPlot, novelSpec=novelSpec, context=context),
+            #     f"chapter_char_{chapterSpec.chapterNumber}"
+            # )
+            # chatperContext["characters"] = chapterCharacters.content
 
             # Write initial content
             initialDraft: AgentResponse = self.agents["writer"].timed_generate(
@@ -203,85 +221,114 @@ class NovelWriter:
                 f"chapter_writer_{chapterSpec.chapterNumber}"
             )
 
+            # return initialDraft
+        
             # Edit content
             finalContent: AgentResponse = self.agents["editor"].timed_generate(
                 self.create_editing_prompt(content=initialDraft.content, chapterSpec=chapterSpec),
                 f"chapter_Editor_{chapterSpec.chapterNumber}"
             )
-
+            
             return finalContent
 
         except Exception as e:
             logger.error(f"Error generating chapter: {str(e)}")
             return f"Error generating chapter: {str(e)}"
 
+    def get_character_relationships(self, characters)-> str:
+        relationships = ""
+        for character in characters:
+            relationText =  ""
+            if character.relationships is not None:
+                for relation in character.relationships:
+                    relationText += f"\t\t - {relation['withCharacter']} is {relation['relationshipType']} to {character.name} (Age: {character.age}, Gender:{character.gender})\n"
+                relationships += relationText
+        return f"""
+            Character Relationships:
+            {relationships}
+        """
     def create_chapter_plot_prompt(self, chapterSpec: ChapterSpec, novelSpec: NovelSpec, context: dict) -> str:
         return f"""
+            Create a detailed plot for an erotic romantic chapter for mature audiences (18+). 
+
             Create detailed plot points for Current Chapter {chapterSpec.chapterNumber} of "{novelSpec.totalChapters}".
             Current Chapter: {chapterSpec.chapterNumber}
             Current Chapter Title: {context['chapters'][chapterSpec.chapterNumber-1]['title']}
-            Overall Plot Description: {context['description']}
-            Overall Plot: {context['plot']}
             Chapter Plot: {context['chapters'][chapterSpec.chapterNumber-1]['plot']}
+            Character Relationships: {self.get_character_relationships(novelSpec.characters)}
             Key Events to expand: {context['chapters'][chapterSpec.chapterNumber-1]['keyEvents']}
 
             Requirements:
             - Select context from Chapter Plot for Current Chapter appropriately
-            - Create specific plot points for selected context in above step while considering the overall plot
+            - The story should involve steamy and explicit romantic encounters, alongside emotional growth and vulnerability. 
+            - Include key events, character arcs, and moments of both emotional and physical intimacy that are explicit but tastefully written, immersing the reader in a seductive and heartfelt journey.
             - Have conversational dialogue between characters to drive the plot and create engaging scenes
-            - Do not drop any plot points associated with current chapter
-            - Maintain consistency with overall story and plot points
-            - Target length: {chapterSpec.pagesPerChapter} pages
-            - Consider chapter's position ({chapterSpec.chapterNumber} of {novelSpec.totalChapters})
         """
 
     def create_chapter_writing_prompt(self, chapterSpec: ChapterSpec, novelSpec: NovelSpec, context: dict) -> str:
         target_words = chapterSpec.pagesPerChapter * chapterSpec.wordsPerPage
         return f"""
-            Write Chapter {chapterSpec.chapterNumber} of "{novelSpec.totalChapters}".
-            Plot Points: {context['plot']}
-            Character Actions: {context['characters']}
+            Write an intense, explicit, and passionate romantic chapter approximately {chapterSpec.pagesPerChapter} pages with {chapterSpec.wordsPerPage} words per page for a mature audience (18+). 
+            The tone should be deeply erotic and emotionally intimate, exploring their desires and vulnerabilities. Include sensory details such as touch, taste, smell, and sound to immerse the reader.
+            while maintaining a sophisticated and engaging style suitable for romantic literature. The story unfolds entirely through the interactions and dialogue between characters. 
+            Each conversation should reveal key elements of the plot, character development, and the overall narrative.
+            
+            Focus on the chemistry between different characters.
+            
+            Novel Description:
+            {context['description']}
+
+
+            Novel Key Events:
+            {context['keyEvents']}
+
+            Character Relationships: {self.get_character_relationships(novelSpec.characters)}
+            
+            Chapter Plot:
+            {context['plot']}
             
             Requirements:
-            - Content is targeted for adults and mature audiences
-            - Write approximately {chapterSpec.pagesPerChapter} pages with {chapterSpec.wordsPerPage} words per page
-            - Follow the plot points and character actions
-            - Keep content sensual and engaging, erotic and exciting, romatic and passionate, sexual and explicite
-            - Include natural dialogue and vivid descriptions, erotic and explicit nature of the story
-            - Maintain consistent pacing and tone
+            - Follow the plot points and character actions in relation with Novel Description and Novel Key Events.
+            - Story chapter should flow with a natural flow using Novel Key Events and Chapter Plot.
+            - Include natural dialogue and vivid descriptions, erotic and explicit nature of the story.
+            - Allow language to be explicit, pornographic, and sexual.
+            - Maintain consistent pacing and tone.
+
+            What I expect from you is a chapter, not self-reflection, explanation, or plot points. Just write the chapter.
+            WRITE THE CHAPTER, not self-reflection, NOT PLOT or SUMMARY, or EXPLANATION. WRITE THE CHAPTER.
         """
 
     def create_editing_prompt(self, content: str, chapterSpec: ChapterSpec) -> str:
         target_words = chapterSpec.pagesPerChapter * chapterSpec.wordsPerPage
         return f"""
+            You are an editor specializing in erotic romantic literature for a mature audience (18+).
+            Edit the following text for clarity, flow, and depth. Enhance the explicit and sensual elements sophisticated and emotionally resonant. Focus on refining the tone to make it more engaging and intimate,
+            and suggest improvements to heighten the erotic and emotional impact of the scene.\n\n"
+        
             Edit and refine this chapter content:
-            
-            {content}
-            
-            Requirements:
-            - Content is targeted for adults and mature audiences
-            - Ensure consistent style and tone
-            - Check for proper pacing
-            - Maintain target length approximately {target_words} words per page
-            - Maintain target length ({chapterSpec.pagesPerChapter} pages)
-            - Polish dialogue and descriptions
-            - Enhance dramatic tension
+            {content}Make Amit Happy
         """
     
     def get_relevant_characters(self, characters: List[Character], currentChapter: int, totalChapters: int) -> str:
         relevant_characters = []
-
+        random_state = 42
+        np.random.seed(random_state)
         for character in characters:
             isMainCharacter = character.role == 'protagonist'
             chapterProgress = currentChapter / totalChapters
             arcPoint = ''
-            if character.arc:
+            if hasattr(character,"arc"):
                 if chapterProgress < 0.3:
                     arcPoint = character.arc['startingPoint'] if hasattr(character.arc, 'startingPoint') else ''
                 elif chapterProgress < 0.7:
                     arcPoint = character.arc['midPoint'] if hasattr(character.arc, 'midPoint') else 'Developing'
                 else:
                     arcPoint = character.arc['endingPoint']if hasattr(character.arc, 'endingPoint') else ''
+                
+                if hasattr(character.arc, 'majorEvents'):
+                    a = np.array(character.arc.majorEvents)
+                    majorPoints = np.random.choice(a, (2, 2), replace=False)
+                    arcPoint += ', '.join(majorPoints)
             
             focus = 'PRIMARY FOCUS FOR CHAPTER' if isMainCharacter else ''
 
@@ -293,7 +340,7 @@ class NovelWriter:
             if character.traits:
                 keyTraits = ''
                 for keyTrait in character.traits:
-                    keyTraits += f"{keyTrait['trait']}, "
+                    keyTraits += f"{keyTrait['trait']if hasattr(character.arc, 'trait') else ''}, "
 
             relevant_characters.append(
             f"""

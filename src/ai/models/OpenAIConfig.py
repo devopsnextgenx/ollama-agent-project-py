@@ -6,7 +6,7 @@ from .SafetyConfig import SafetyConfig
 @dataclass
 class OpenAIConfig:
     """Configuration for OpenAI LLM models"""
-    temperature: float = 0.7
+    temperature: float = 0.85
     max_tokens: Optional[int] = None
     top_p: float = 1.0
     frequency_penalty: float = 0.0

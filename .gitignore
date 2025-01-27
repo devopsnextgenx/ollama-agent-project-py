@@ -63,3 +63,5 @@ db.sqlite3
 # Contents
 contents/
 .novel-spec.yml
+
+models/ggufs/

@@ -40,7 +40,7 @@ class CharacterArc:
 class CharacterRelationship:
     withCharacter: str
     relationshipType: str
-    dynamics: str
+    dynamics: Optional[str] = None
     arc: Optional[str] = None
 
 @dataclass
@@ -48,6 +48,7 @@ class Character:
     name: str
     role: str
     age: Optional[int]
+    gender: Optional[str] = ''
     background: Optional[str] = ''
     motivation: Optional[str] = ''
     traits: Optional[List[CharacterTrait]] = None

@@ -31,6 +31,7 @@ class App(ctk.CTk):
         # Content frame with scrollable
         self.scrollable_frame = ctk.CTkScrollableFrame(self.top_frame, width=600)
         self.scrollable_frame.pack(side="right", fill="both", expand=True)
+        self.scrollable_frame.grid_columnconfigure(1, weight=1)
 
         # Progress bar
         self.progress_var = ctk.StringVar()
@@ -49,12 +50,8 @@ class App(ctk.CTk):
         for widget in self.scrollable_frame.winfo_children():
             widget.destroy()
 
-        self.novel_title_label = ctk.CTkLabel(self.scrollable_frame, text="Title", anchor="w")
-        self.novel_title_label.grid(row=0, column=0, pady=10, padx=10, sticky="w")
-        self.novel_title_entry = ctk.CTkEntry(self.scrollable_frame, width=300)
-        self.novel_title_entry.grid(row=0, column=1, pady=10, padx=10, sticky="ew")
-
         fields = [
+            ("Title", "title"),
             ("Total Chapters", "totalChapters"),
             ("Pages Per Chapter", "pagesPerChapter"),
             ("Words Per Page", "wordsPerPage"),
@@ -69,7 +66,7 @@ class App(ctk.CTk):
         for idx, (label_text, attr) in enumerate(fields, start=1):
             label = ctk.CTkLabel(self.scrollable_frame, text=label_text, anchor="w")
             label.grid(row=idx, column=0, pady=10, padx=10, sticky="w")
-            entry = ctk.CTkEntry(self.scrollable_frame, width=300)
+            entry = ctk.CTkEntry(self.scrollable_frame)
             entry.grid(row=idx, column=1, pady=10, padx=10, sticky="ew")
             self.entries[attr] = entry
 
@@ -82,7 +79,7 @@ class App(ctk.CTk):
         self.characters_table.heading("Age", text="Age")
         self.characters_table.grid(row=len(fields) + 2, column=0, columnspan=2, pady=10, padx=10, sticky="ew")
 
-        self.add_character_button = ctk.CTkButton(self.scrollable_frame, text="Add Character", command=self.add_character)
+        self.add_character_button = ctk.CTkButton(self.scrollable_frame, text="Add Character", command=self.add_character_popup)
         self.add_character_button.grid(row=len(fields) + 3, column=0, pady=10, padx=10, sticky="w")
 
         self.save_button = ctk.CTkButton(self.scrollable_frame, text="Save NovelSpec", command=self.save_novel_spec)
@@ -105,8 +102,81 @@ class App(ctk.CTk):
             except ValueError:
                 messagebox.showerror("Error", "Invalid input format. Use: name,role,age")
 
+    def add_character_popup(self):
+        popup = ctk.CTkToplevel(self)
+        popup.title("Add Character")
+        popup.geometry("400x600")
+        # Enable Esc key to close popup
+        popup.bind("<Escape>", lambda event: popup.destroy())
+        
+        # Layout Grid Configuration
+        popup.columnconfigure(1, weight=1)
+
+        # Character Basic Info
+        name_label = ctk.CTkLabel(popup, text="Name", anchor="w", width=200)
+        name_label.grid(row=0, column=0, sticky="w", padx=5, pady=5)
+        name_entry = ctk.CTkEntry(popup)
+        name_entry.grid(row=0, column=1, sticky="we", padx=5, pady=5)
+
+        role_label = ctk.CTkLabel(popup, text="Role", anchor="w")
+        role_label.grid(row=1, column=0, sticky="w", padx=5, pady=5)
+        role_entry = ctk.CTkEntry(popup)
+        role_entry.grid(row=1, column=1, sticky="we", padx=5, pady=5)
+
+        age_label = ctk.CTkLabel(popup, text="Age", anchor="w")
+        age_label.grid(row=2, column=0, sticky="w", padx=5, pady=5)
+        age_entry = ctk.CTkEntry(popup)
+        age_entry.grid(row=2, column=1, sticky="we", padx=5, pady=5)
+
+        # Traits Section
+        traits_label = ctk.CTkLabel(popup, text="Traits (trait: description)", anchor="w")
+        traits_label.grid(row=3, column=0, columnspan=2, sticky="w", padx=5, pady=5)
+        traits_text = ctk.CTkTextbox(popup, height=60)
+        traits_text.grid(row=3, column=1, columnspan=2, sticky="we", padx=5, pady=5)
+
+        # Arc Section
+        arc_label = ctk.CTkLabel(popup, text="Character Arc")
+        arc_label.grid(row=4, column=0, columnspan=2, sticky="w", padx=5, pady=5)
+
+        starting_point_label = ctk.CTkLabel(popup, text="Starting Point", anchor="w")
+        starting_point_label.grid(row=5, column=0, sticky="w", padx=5, pady=5)
+        starting_point_entry = ctk.CTkEntry(popup)
+        starting_point_entry.grid(row=5, column=1, sticky="we", padx=5, pady=5)
+
+        mid_point_label = ctk.CTkLabel(popup, text="Mid Point", anchor="w")
+        mid_point_label.grid(row=6, column=0, sticky="w", padx=5, pady=5)
+        mid_point_entry = ctk.CTkEntry(popup)
+        mid_point_entry.grid(row=6, column=1, sticky="we", padx=5, pady=5)
+
+        ending_point_label = ctk.CTkLabel(popup, text="Ending Point", anchor="w")
+        ending_point_label.grid(row=7, column=0, sticky="w", padx=5, pady=5)
+        ending_point_entry = ctk.CTkEntry(popup)
+        ending_point_entry.grid(row=7, column=1, sticky="we", padx=5, pady=5)
+
+        major_events_label = ctk.CTkLabel(popup, text="Major Events (comma-separated)", anchor="w")
+        major_events_label.grid(row=8, column=0, columnspan=2, sticky="w", padx=5, pady=5)
+        major_events_entry = ctk.CTkEntry(popup)
+        major_events_entry.grid(row=8, column=1, columnspan=2, sticky="we", padx=5, pady=5)
+
+        # Relationships Section
+        relationships_label = ctk.CTkLabel(popup, text="Relationships", anchor="w")
+        relationships_label.grid(row=9, column=0, columnspan=2, sticky="w", padx=5, pady=5)
+
+        relationship_text = ctk.CTkTextbox(popup, height=60)
+        relationship_text.grid(row=9, column=1, columnspan=2, sticky="we", padx=5, pady=5)
+
+        # Save Button
+        save_button = ctk.CTkButton(popup, text="Save", command=lambda: self.save_character(
+            name_entry.get(), role_entry.get(), age_entry.get(),
+            traits_text.get("1.0", "end-1c"),
+            starting_point_entry.get(), mid_point_entry.get(), ending_point_entry.get(), major_events_entry.get(),
+            relationship_text.get("1.0", "end-1c"),
+            popup
+        ))
+        save_button.grid(row=10, column=0, columnspan=2, pady=10)
+
     def save_novel_spec(self):
-        title = self.novel_title_entry.get()
+        title = self.entries["title"].get()
         characters = []
         for row in self.characters_table.get_children():
             values = self.characters_table.item(row, 'values')
@@ -127,9 +197,9 @@ class App(ctk.CTk):
             keyEvents=key_events
         )
 
-        with open("novel_spec.yaml", "w") as file:
+        with open("novel_spec.yml", "w") as file:
             yaml.dump(self.novel_spec.__dict__, file)
-        messagebox.showinfo("Saved", "NovelSpec saved to novel_spec.yaml")
+        messagebox.showinfo("Saved", "NovelSpec saved to novel_spec.yml")
 
     def show_safety_spec(self):
         for widget in self.scrollable_frame.winfo_children():

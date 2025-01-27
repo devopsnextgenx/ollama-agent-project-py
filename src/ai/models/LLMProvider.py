@@ -5,7 +5,7 @@ from ai.models.OpenAIConfig import OpenAIConfig
 from ai.models.LLMConfig import LLMConfig
 from ai.models.SafetyConfig import SafetyConfig
 import logging
-
+import os
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -32,9 +32,9 @@ class LLMProvider:
     @staticmethod
     def create_openai_config(**kwargs) -> OpenAIConfig:
         openAIConfig = OpenAIConfig(
-            temperature=0.7,
+            temperature=0.45,
             max_tokens=None,
-            top_p=1.0,
+            top_p=0.93,
             frequency_penalty=0.0,
             presence_penalty=0.0,
             stop=None,
@@ -48,13 +48,49 @@ class LLMProvider:
             else:
                 logger.warning(f"Unknown OpenAI config parameter: {key}")
         return openAIConfig
-
+    @staticmethod
+    def sanitize_folder_name(input_string):
+        """
+        Convert a string to a Linux-friendly folder name.
+        
+        - Removes all non-alphanumeric characters except underscores
+        - Replaces multiple consecutive underscores with a single underscore
+        - Removes leading and trailing underscores
+        - Converts to lowercase
+        
+        Args:
+            input_string (str): The input string to be sanitized
+        
+        Returns:
+            str: A sanitized string suitable for a Linux folder name
+        """
+        import re
+        
+        # Convert to lowercase
+        sanitized = input_string.lower()
+        
+        # Replace non-alphanumeric characters (except underscores) with a single underscore
+        sanitized = re.sub(r'[^a-z0-9_]+', '_', sanitized)
+        
+        # Replace multiple consecutive underscores with a single underscore
+        sanitized = re.sub(r'_+', '_', sanitized)
+        
+        # Remove leading and trailing underscores
+        sanitized = sanitized.strip('_')
+        
+        return sanitized
     @staticmethod
     def create_llm_config(base_url="http://localhost:11434", model = "phi4", openAIConfig = None) -> LLMConfig:
+        storageFolder = LLMProvider.sanitize_folder_name(model)
+        storagePath = os.path.join("contents", storageFolder)
+        os.makedirs(storagePath, exist_ok=True)
+        print(f"Storage path: {storagePath}")
         if openAIConfig is None:
             openAIConfig = LLMProvider.create_openai_config()
         return LLMConfig(
             base_url=base_url,
             model=model,
-            openAIConfig=openAIConfig
+            openAIConfig=openAIConfig,
+            modelStore=storagePath
         )
+
